@@ -1,0 +1,23 @@
+form#blog_editor{
+    width: 300px;
+    margin: 0px;
+    padding: 0px;
+}
+
+form#blog_editor label, form#blog_editor input[type="text"]{
+    display: block;
+}
+
+form#blog_editor #blog_editor_buttons{
+    border: none;
+    text-align: right;
+}
+
+form#blog_editor textarea, form#editor input[type="text"]{
+    width: 90%;
+    margin-bottom: 2em;
+}
+
+form#blog_editor textarea{
+    height: 10em;
+}
