@@ -2,34 +2,20 @@
 
 // this is a table data gateway for the blog_entry_table table in the database
 
-class Blog_Entry_Table{
+// Include parent class definition in order to inherit
+include_once "models/General_Table.class.php";
 
-    private $database;
-
-    // constructor takes PDO created in admin.php as
-    // argument and stored in the above class property
-    public function __construct( $database ){
-        $this->database = $database;
-    }
+// extend class from the parent class
+class Blog_Entry_Table extends General_Table {
 
     // method to save the blog entries
     public function saveBlogEntry ( $blog_title, $blog_entry ){
         // using placeholders to beef up form security
-        $blogEntrySQL = "INSERT INTO blog_entry_table (blog_title, blog_text)
+        $sql = "INSERT INTO blog_entry_table (blog_title, blog_text)
          VALUES( ?, ?)";
-        $blogEntryStatement = $this->database->prepare( $blogEntrySQL);
-
         // create an array with dynamic data: follow the order above
-        $blogFormData = array($blog_title, $blog_entry);
-
-        try {
-            // pass the $blogFormData to be executed as argument
-            $blogEntryStatement->execute($blogFormData);
-        } catch (Exception $e) {
-            $msg = "<p>You tried running this sql: $blogEntrySQL</p>
-                    <p>Exception: $e</p>";
-            trigger_error($msg);        
-        }     
+        $data = array($blog_title, $blog_entry);
+        $statement = $this->makeStatement( $sql, $data );     
         
         // return the blog_id of the last saved blog_entry
         return $this->database->lastInsertId();
@@ -37,74 +23,59 @@ class Blog_Entry_Table{
 
     // method to view the data inside the blog_entry_table
     public function getAllBlogEntries(){
-        $blogViewingSQL = "SELECT blog_id, blog_title,
+        $sql = "SELECT blog_id, blog_title,
             SUBSTRING(blog_text, 1, 150) AS intro
             FROM blog_entry_table";
-        $blogViewingStatement = $this->database->prepare( $blogViewingSQL );  
-        
-        try {
-            $blogViewingStatement->execute();
-        } catch (Exception $e) {
-            $exceptionMessage = "<p>You ran this sql: $blogViewingSQL</p>
-                                <p>Exception: $e</p>";
-            trigger_error($exceptionMessage);
-        }
-
+        $data = null;
+        $statement = $this->makeStatement( $sql, $data);
         // return a PDOStatement; thru which access to all blog entries are obtained at a time
-        return $blogViewingStatement; 
+        return $statement; 
     }
 
     // method to retrieve the contents of a blog entry... 
     // blog_id taken as argument
     public function getBlogEntry( $blog_id) {
-        $getBlogEntrySQL = "SELECT blog_id, blog_title, blog_text, creation_date FROM blog_entry_table WHERE blog_id = ?";
-        $getBlogEntryStatement = $this->database->prepare( $getBlogEntrySQL );
-
-        $blog_data = array( $blog_id );
-        try {
-            $getBlogEntryStatement->execute( $blog_data);
-        } catch (Exception $e) {
-            $exceptionMessage = "<p>You ran this sql: $blogViewingSQL</p>
-                <p>Exception: $e</p>";
-            trigger_error($exceptionMessage);
-        }
-
-        $model = $getBlogEntryStatement->fetchObject();
+        $sql = "SELECT blog_id, blog_title, blog_text, creation_date FROM blog_entry_table WHERE blog_id = ?";
+        $data = array( $blog_id );
+        $statement = $this->makeStatement( $sql, $data);
+        $model = $statement->fetchObject();
         return $model;
     }
 
     // Method to delete a blog entry from the database
+    // call method to delete comments before deleting the blog entry
     public function deleteBlogEntry( $blog_id ){
-        $deleteBlogSQL = "DELETE FROM blog_entry_table WHERE blog_id = ?";
-        $deleteBlogStatement = $this->database->prepare( $deleteBlogSQL );
-
-        $blog_data = array( $blog_id );
-
-        try {
-            $deleteBlogStatement->execute( $blog_data );
-        } catch (Exception $e) {
-            $exceptionMessage = "<p>You ran this sql: $blogViewingSQL</p>
-                <p>Exception: $e</p>";
-            trigger_error($exceptionMessage);
-        }
+        $this->deleteCommentsById ( $blog_id );
+        $sql = "DELETE FROM blog_entry_table WHERE blog_id = ?";
+        $data = array( $blog_id );
+        $statement = $this->makeStatement( $sql, $data );
     }
 
     // Method to update blog entries in the database
     public function updateBlogEntry( $blog_id, $blog_title, $blog_entry ){
-        $updateBlogSQL = "UPDATE blog_entry_table 
+        $sql = "UPDATE blog_entry_table 
             SET blog_title = ?, blog_text = ? WHERE blog_id = ?";
-        $updateBlogStatement = $this->database->prepare( $updateBlogSQL );
-        
-        $blog_data = array($blog_title, $blog_entry, $blog_id);
+        $data = array($blog_title, $blog_entry, $blog_id);
+        $statement = $this->makeStatement( $sql, $data );
+        return $statement;
+    }
 
-        try {
-            $updateBlogStatement->execute( $blog_data );
-        } catch (Exception $e) {
-            $exceptionMessage = "<p>You ran this sql: $blogViewingSQL</p>
-                <p>Exception: $e</p>";
-            trigger_error($exceptionMessage);
-        }
+    // method to perform a search when the user has searched for an item
+    public function searchBlogEntry( $searchTerm ){
+        $sql = "SELECT blog_id, blog_title FROM blog_entry_table
+                WHERE blog_title LIKE ? 
+                or blog_text LIKE ?";
+        $data = array ("%$searchTerm%", "%$searchTerm%");
+        $statement = $this->makeStatement( $sql, $data );
+        return $statement;
+    }
 
-        return $updateBlogStatement;
+    // private method to delete comments by id
+    private function deleteCommentsById( $blog_id ){
+        include_once "models/Comment_Table.class.php";
+        // create a comment table object
+        $comments = new Comment_Table( $this->database );
+        // delete comments before deleting the blog entry
+        $comments->deleteByBlogEntryId( $blog_id );
     }
 }

@@ -12,6 +12,9 @@ if ($isBlogEntryClicked) {
 
     $blog_entry_data = $blog_entry_table->getBlogEntry( $blog_entry_id );
     $blog_output = include_once "views/blog_entry_html.php";
+
+    // combining views: this is to display the comments on the selected blog entry
+    $blog_output .= include_once "controllers/blog_comments.php";
 } else {
     // PDO statement returned from getAllBlogEntries(): to list all entries
     $blog_entries = $blog_entry_table->getAllBlogEntries();
